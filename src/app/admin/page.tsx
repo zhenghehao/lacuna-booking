@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { BOOKING_SLOTS } from "@/lib/constants";
+import { DATE_PLACES, TIME_SLOTS_BY_DATE } from "@/lib/constants";
 
 interface BookingData {
   id: string;
@@ -84,9 +84,13 @@ export default function AdminDashboard() {
     if (bookings.length === 0) return;
 
     // Helper to format slot name
-    const getSlotLabel = (slotId: string) => {
-      const found = BOOKING_SLOTS.find((s) => s.id === slotId);
-      return found ? found.label.replace(/,/g, " ") : slotId;
+    const getSlotLabel = (slotStr: string) => {
+      const parts = slotStr.split("|");
+      if (parts.length !== 2) return slotStr;
+      const [datePlaceId, timeSlotId] = parts;
+      const found = DATE_PLACES.find((s) => s.id === datePlaceId);
+      const dateName = found ? found.label.split(";")[0] : datePlaceId;
+      return `${dateName} @ ${timeSlotId}`;
     };
 
     // Header row
@@ -157,14 +161,6 @@ export default function AdminDashboard() {
   const confirmedBookings = bookings.filter((b) => b.status === "CONFIRMED").length;
   const cancelledBookings = bookings.filter((b) => b.status === "CANCELLED").length;
 
-  const slotStats = BOOKING_SLOTS.map((slot) => {
-    const count = bookings.filter((b) => b.slot === slot.id && b.status === "CONFIRMED").length;
-    return {
-      ...slot,
-      count,
-    };
-  });
-
   return (
     <div className="container" style={{ maxWidth: "1000px" }}>
       <div className="header">
@@ -204,30 +200,51 @@ export default function AdminDashboard() {
         </div>
 
         {/* Slot fill level */}
-        <div className="card">
-          <div className="card-title">场次预约名额占用率 (Slot Occupancy Rate)</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            {slotStats.map((slot) => {
-              const fillPercentage = Math.min((slot.count / slot.capacity) * 100, 100);
-              return (
-                <div key={slot.id}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.25rem" }}>
-                    <span style={{ maxWidth: "70%" }}>{slot.label}</span>
-                    <span>{slot.count} / {slot.capacity} 人</span>
+        {DATE_PLACES.map((dp) => (
+          <div className="card" key={dp.id} style={{ marginBottom: "1.5rem" }}>
+            <div className="card-title" style={{ fontSize: "1.05rem" }}>
+              {dp.label} - 时间段占用情况
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "0.75rem" }}>
+              {TIME_SLOTS_BY_DATE[dp.id].map((time) => {
+                const compositeId = `${dp.id}|${time}`;
+                const isOccupied = bookings.some(
+                  (b) => b.slot === compositeId && b.status === "CONFIRMED"
+                );
+                return (
+                  <div
+                    key={time}
+                    style={{
+                      padding: "0.75rem",
+                      borderRadius: "6px",
+                      border: "1px solid var(--border-color)",
+                      backgroundColor: isOccupied ? "rgba(239, 68, 68, 0.05)" : "rgba(16, 185, 129, 0.05)",
+                      borderColor: isOccupied ? "rgba(239, 68, 68, 0.2)" : "rgba(16, 185, 129, 0.2)",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    <span style={{ fontWeight: "600" }}>{time}</span>
+                    <span
+                      style={{
+                        padding: "0.15rem 0.4rem",
+                        borderRadius: "4px",
+                        fontSize: "0.7rem",
+                        fontWeight: "bold",
+                        backgroundColor: isOccupied ? "rgba(239, 68, 68, 0.15)" : "rgba(16, 185, 129, 0.15)",
+                        color: isOccupied ? "var(--error-color)" : "var(--success-color)",
+                      }}
+                    >
+                      {isOccupied ? "已占用" : "空闲"}
+                    </span>
                   </div>
-                  <div style={{ width: "100%", height: "8px", backgroundColor: "rgba(0,0,0,0.06)", borderRadius: "9999px", overflow: "hidden" }}>
-                    <div style={{
-                      width: `${fillPercentage}%`,
-                      height: "100%",
-                      backgroundColor: fillPercentage >= 100 ? "var(--error-color)" : fillPercentage >= 80 ? "#f59e0b" : "var(--primary-color)",
-                      borderRadius: "9999px"
-                    }} />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        ))}
 
         {/* Bookings table */}
         <div className="card" style={{ marginTop: "2rem" }}>
@@ -243,14 +260,17 @@ export default function AdminDashboard() {
                     <th>姓名 (Name)</th>
                     <th>公司/职位 (Company/Title)</th>
                     <th>联系方式 (Contact)</th>
-                    <th>场次 (Slot)</th>
+                    <th>场次和时间 (Slot & Time)</th>
                     <th>状态 (Status)</th>
                     <th>操作 (Action)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {bookings.map((booking) => {
-                    const slotInfo = BOOKING_SLOTS.find((s) => s.id === booking.slot);
+                    const parts = booking.slot.split("|");
+                    const [datePlaceId, timeSlotId] = parts;
+                    const datePlaceObj = DATE_PLACES.find((d) => d.id === datePlaceId);
+                    
                     return (
                       <tr key={booking.id}>
                         <td style={{ fontWeight: "600" }}>{booking.name}</td>
@@ -259,8 +279,11 @@ export default function AdminDashboard() {
                           <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>{booking.position}</div>
                         </td>
                         <td>{booking.contact}</td>
-                        <td style={{ maxWidth: "250px", fontSize: "0.8rem" }}>
-                          {slotInfo ? slotInfo.label.split(";")[0] : booking.slot}
+                        <td>
+                          <div style={{ fontWeight: "500" }}>{timeSlotId}</div>
+                          <div style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>
+                            {datePlaceObj ? datePlaceObj.label.split(";")[0] : datePlaceId}
+                          </div>
                         </td>
                         <td>
                           <span className={`status-badge status-${booking.status.toLowerCase()}`}>

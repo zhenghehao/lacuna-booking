@@ -3,7 +3,7 @@
 import React, { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { BOOKING_SLOTS } from "@/lib/constants";
+import { DATE_PLACES } from "@/lib/constants";
 
 interface BookingData {
   id: string;
@@ -77,7 +77,9 @@ function SuccessContent() {
     );
   }
 
-  const selectedSlot = BOOKING_SLOTS.find((s) => s.id === booking.slot);
+  const [datePlaceId, timeSlotId] = booking.slot.split("|");
+  const datePlaceObj = DATE_PLACES.find((d) => d.id === datePlaceId);
+  const displaySlot = datePlaceObj ? `${datePlaceObj.label.split(";")[0]} @ ${timeSlotId}` : booking.slot;
 
   return (
     <div>
@@ -110,7 +112,7 @@ function SuccessContent() {
         </div>
         <div className="detail-row">
           <div className="detail-label">时间地点 (Slot):</div>
-          <div className="detail-value" style={{ fontWeight: "500" }}>{selectedSlot?.label || booking.slot}</div>
+          <div className="detail-value" style={{ fontWeight: "500" }}>{displaySlot}</div>
         </div>
         <div className="detail-row">
           <div className="detail-label">状态 (Status):</div>

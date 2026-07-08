@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { BOOKING_SLOTS } from "@/lib/constants";
+import { DATE_PLACES, TIME_SLOTS_BY_DATE } from "@/lib/constants";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -58,33 +58,52 @@ export async function PATCH(request: Request, { params }: Props) {
       );
     }
 
-    // Validate slot selection
-    const selectedSlot = BOOKING_SLOTS.find((s) => s.id === slot);
-    if (!selectedSlot) {
+    // Parse composite slot (format: "datePlaceId|timeSlotId")
+    const parts = slot.split("|");
+    if (parts.length !== 2) {
+      return NextResponse.json(
+        { error: "Invalid slot format selection" },
+        { status: 400 }
+      );
+    }
+
+    const [datePlaceId, timeSlotId] = parts;
+
+    // Validate Date/Place selection
+    const selectedDatePlace = DATE_PLACES.find((d) => d.id === datePlaceId);
+    if (!selectedDatePlace) {
       return NextResponse.json(
         { error: "Invalid meeting date and place selection" },
         { status: 400 }
       );
     }
 
+    // Validate Time Slot selection
+    const availableTimeSlots = TIME_SLOTS_BY_DATE[datePlaceId];
+    if (!availableTimeSlots || !availableTimeSlots.includes(timeSlotId)) {
+      return NextResponse.json(
+        { error: "Invalid time slot selection" },
+        { status: 400 }
+      );
+    }
+
     const targetStatus = status || "CONFIRMED";
 
-    // If slot changed or booking is being re-confirmed from CANCELLED status
-    const slotChanged = existingBooking.slot !== slot;
-    const statusReconfirmed = existingBooking.status === "CANCELLED" && targetStatus === "CONFIRMED";
-
-    if (targetStatus === "CONFIRMED" && (slotChanged || statusReconfirmed)) {
-      // Check capacity of the target slot
-      const activeBookingsCount = await prisma.booking.count({
+    // If targetStatus is CONFIRMED, check if the slot is occupied by another booking
+    if (targetStatus === "CONFIRMED") {
+      const occupiedByOther = await prisma.booking.findFirst({
         where: {
           slot,
           status: "CONFIRMED",
+          id: {
+            not: id,
+          },
         },
       });
 
-      if (activeBookingsCount >= selectedSlot.capacity) {
+      if (occupiedByOther) {
         return NextResponse.json(
-          { error: "The selected slot is fully booked. Please select another slot." },
+          { error: "该时间段已被他人预约，请选择其他时间。 This time slot is already booked." },
           { status: 400 }
         );
       }

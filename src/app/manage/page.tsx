@@ -3,7 +3,7 @@
 import React, { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { BOOKING_SLOTS } from "@/lib/constants";
+import { DATE_PLACES, TIME_SLOTS_BY_DATE } from "@/lib/constants";
 
 interface BookingData {
   id: string;
@@ -17,12 +17,12 @@ interface BookingData {
 
 function ManageContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const id = searchParams.get("id");
 
   const [booking, setBooking] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [occupiedSlots, setOccupiedSlots] = useState<string[]>([]);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
 
@@ -33,7 +33,8 @@ function ManageContent() {
     company: "",
     position: "",
     contact: "",
-    slot: "",
+    datePlace: "",
+    timeSlot: "",
   });
 
   const fetchBooking = async () => {
@@ -50,12 +51,17 @@ function ManageContent() {
       }
       const data = await res.json();
       setBooking(data);
+
+      // Parse composite slot (format: "datePlaceId|timeSlotId")
+      const [datePlaceId, timeSlotId] = data.slot.split("|");
+
       setFormData({
         name: data.name,
         company: data.company,
         position: data.position,
         contact: data.contact,
-        slot: data.slot,
+        datePlace: datePlaceId || "",
+        timeSlot: timeSlotId || "",
       });
     } catch (err: any) {
       setError(err.message || "Failed to load booking details.");
@@ -64,9 +70,29 @@ function ManageContent() {
     }
   };
 
+  const fetchOccupied = async () => {
+    if (!id) return;
+    try {
+      // Exclude current booking ID so the user's own current slot is not marked as occupied to them
+      const res = await fetch(`/api/bookings/occupied?excludeId=${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setOccupiedSlots(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch occupied slots:", err);
+    }
+  };
+
   useEffect(() => {
     fetchBooking();
   }, [id]);
+
+  useEffect(() => {
+    if (isEditing) {
+      fetchOccupied();
+    }
+  }, [isEditing]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -75,10 +101,18 @@ function ManageContent() {
     });
   };
 
-  const handleSlotSelect = (slotId: string) => {
+  const handleDatePlaceSelect = (datePlaceId: string) => {
     setFormData({
       ...formData,
-      slot: slotId,
+      datePlace: datePlaceId,
+      timeSlot: "", // Reset time slot when date changes
+    });
+  };
+
+  const handleTimeSlotSelect = (timeSlotId: string) => {
+    setFormData({
+      ...formData,
+      timeSlot: timeSlotId,
     });
   };
 
@@ -113,9 +147,17 @@ function ManageContent() {
 
   const handleUpdateBooking = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.datePlace || !formData.timeSlot) {
+      setError("Please select both a date/place and a time slot.");
+      return;
+    }
+
     setActionLoading(true);
     setError("");
     setMessage("");
+
+    const compositeSlot = `${formData.datePlace}|${formData.timeSlot}`;
 
     try {
       const response = await fetch(`/api/bookings/${id}`, {
@@ -124,8 +166,12 @@ function ManageContent() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ...formData,
-          status: "CONFIRMED", // When re-filling or saving, confirm it
+          name: formData.name,
+          company: formData.company,
+          position: formData.position,
+          contact: formData.contact,
+          slot: compositeSlot,
+          status: "CONFIRMED", // Re-activate if cancelled
         }),
       });
 
@@ -162,7 +208,9 @@ function ManageContent() {
     );
   }
 
-  const selectedSlot = BOOKING_SLOTS.find((s) => s.id === booking.slot);
+  // Parse current slot for display
+  const [dbDatePlace, dbTimeSlot] = booking.slot.split("|");
+  const datePlaceObj = DATE_PLACES.find((d) => d.id === dbDatePlace);
 
   return (
     <div>
@@ -204,7 +252,9 @@ function ManageContent() {
             </div>
             <div className="detail-row">
               <div className="detail-label">时间地点 (Slot):</div>
-              <div className="detail-value" style={{ fontWeight: "500" }}>{selectedSlot?.label || booking.slot}</div>
+              <div className="detail-value" style={{ fontWeight: "500" }}>
+                {datePlaceObj ? datePlaceObj.label.split(";")[0] : dbDatePlace} @ {dbTimeSlot}
+              </div>
             </div>
           </div>
 
@@ -306,34 +356,101 @@ function ManageContent() {
             />
           </div>
 
+          {/* Date and Place Selection */}
           <div className="form-group">
             <label>
               Date and Place <span className="required">*</span>
             </label>
             <div className="radio-group">
-              {BOOKING_SLOTS.map((slot) => (
+              {DATE_PLACES.map((dp) => (
                 <div
-                  key={slot.id}
+                  key={dp.id}
                   className={`radio-option ${
-                    formData.slot === slot.id ? "selected" : ""
+                    formData.datePlace === dp.id ? "selected" : ""
                   }`}
-                  onClick={() => handleSlotSelect(slot.id)}
+                  onClick={() => handleDatePlaceSelect(dp.id)}
                 >
                   <input
                     type="radio"
-                    id={`edit-${slot.id}`}
-                    name="slot"
-                    checked={formData.slot === slot.id}
-                    onChange={() => handleSlotSelect(slot.id)}
+                    id={`edit-${dp.id}`}
+                    name="datePlace"
+                    checked={formData.datePlace === dp.id}
+                    onChange={() => handleDatePlaceSelect(dp.id)}
                     required
                   />
-                  <label htmlFor={`edit-${slot.id}`} className="radio-text" style={{ fontWeight: "normal", cursor: "pointer", display: "inline" }}>
-                    {slot.label}
+                  <label htmlFor={`edit-${dp.id}`} className="radio-text" style={{ fontWeight: "normal", cursor: "pointer", display: "inline" }}>
+                    {dp.label}
                   </label>
                 </div>
               ))}
             </div>
           </div>
+
+          {/* Dynamic Time Slot Selection */}
+          {formData.datePlace && (
+            <div className="form-group" style={{ marginTop: "2rem" }}>
+              <label>
+                Please select your preferred time slot. <span className="required">*</span>
+              </label>
+              <p className="description">
+                Greyed-out options are already booked.
+              </p>
+              <div className="radio-group">
+                {TIME_SLOTS_BY_DATE[formData.datePlace].map((time) => {
+                  const compositeId = `${formData.datePlace}|${time}`;
+                  const isOccupied = occupiedSlots.includes(compositeId);
+                  const isSelected = formData.timeSlot === time;
+
+                  return (
+                    <div
+                      key={time}
+                      className={`radio-option ${isSelected ? "selected" : ""} ${
+                        isOccupied ? "disabled" : ""
+                      }`}
+                      onClick={() => !isOccupied && handleTimeSlotSelect(time)}
+                      style={
+                        isOccupied
+                          ? {
+                              opacity: 0.5,
+                              cursor: "not-allowed",
+                              backgroundColor: "rgba(0,0,0,0.02)",
+                            }
+                          : {}
+                      }
+                    >
+                      <input
+                        type="radio"
+                        id={`edit-time-${time}`}
+                        name="timeSlot"
+                        checked={isSelected}
+                        disabled={isOccupied}
+                        onChange={() => !isOccupied && handleTimeSlotSelect(time)}
+                        required
+                      />
+                      <label
+                        htmlFor={`edit-time-${time}`}
+                        className="radio-text"
+                        style={{
+                          fontWeight: "normal",
+                          cursor: isOccupied ? "not-allowed" : "pointer",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          width: "100%",
+                        }}
+                      >
+                        <span>{time}</span>
+                        {isOccupied && (
+                          <span style={{ color: "var(--error-color)", fontSize: "0.85rem", fontWeight: "bold" }}>
+                            配额已满
+                          </span>
+                        )}
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="btn-container">
             <button type="submit" className="btn" disabled={actionLoading}>
