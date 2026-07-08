@@ -15,44 +15,109 @@ interface BookingData {
 }
 
 export default function PublicDashboard() {
+  const [password, setPassword] = useState("");
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const [bookings, setBookings] = useState<BookingData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const fetchBookings = async () => {
+  // Check if password exists in localStorage on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedPassword = localStorage.getItem("lacuna_dashboard_pwd");
+      if (savedPassword) {
+        setPassword(savedPassword);
+        fetchBookings(savedPassword);
+      }
+    }
+  }, []);
+
+  const fetchBookings = async (pwd: string) => {
+    setLoading(true);
+    setError("");
     try {
-      const response = await fetch("/api/public/bookings");
+      const response = await fetch("/api/public/bookings", {
+        headers: {
+          Authorization: `Bearer ${pwd}`,
+        },
+      });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("密码错误。 Incorrect Password.");
+        }
         throw new Error("Failed to load booking details.");
       }
 
       const data = await response.json();
       setBookings(data);
+      setIsAuthorized(true);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("lacuna_dashboard_pwd", pwd);
+      }
     } catch (err: any) {
       setError(err.message || "Failed to fetch bookings.");
+      setIsAuthorized(false);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchBookings();
-    
-    // Auto refresh every 30 seconds for live screen display
-    const interval = setInterval(fetchBookings, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    if (isAuthorized && password) {
+      // Auto refresh every 30 seconds for live screen display once logged in
+      const interval = setInterval(() => fetchBookings(password), 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthorized, password]);
 
-  if (loading) {
-    return <div style={{ textAlign: "center", padding: "4rem" }}>正在加载预约看板 Loading...</div>;
-  }
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password.trim()) {
+      setError("Password is required.");
+      return;
+    }
+    fetchBookings(password);
+  };
 
-  if (error) {
+  const handleLogout = () => {
+    setIsAuthorized(false);
+    setPassword("");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("lacuna_dashboard_pwd");
+    }
+  };
+
+  if (!isAuthorized) {
     return (
-      <div className="container">
+      <div className="container" style={{ maxWidth: "450px" }}>
+        <div className="header">Live Dashboard</div>
         <div className="content">
-          <div className="alert alert-error">{error}</div>
+          <form onSubmit={handleLoginSubmit}>
+            {error && <div className="alert alert-error">{error}</div>}
+            <div className="form-group">
+              <label htmlFor="dashboard-pwd">输入查看密码 (Dashboard Password):</label>
+              <input
+                type="password"
+                id="dashboard-pwd"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="默认查看密码: viewer123"
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  fontSize: "1rem",
+                  border: "1px solid var(--border-color)",
+                  borderRadius: "6px",
+                }}
+              />
+            </div>
+            <div className="btn-container" style={{ marginTop: "1rem" }}>
+              <button type="submit" className="btn" disabled={loading} style={{ width: "100%" }}>
+                {loading ? "Verifying..." : "进入看板 (Enter)"}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     );
@@ -74,6 +139,11 @@ export default function PublicDashboard() {
           <div>
             <h2 style={{ fontSize: "1.5rem", fontWeight: "700" }}>预约数据看板 (Public Monitor)</h2>
             <p className="description">实时监控当前的会议预约和场次占用情况 (每30秒自动更新)</p>
+          </div>
+          <div>
+            <button onClick={handleLogout} className="btn btn-secondary" style={{ fontSize: "0.9rem", padding: "0.5rem 1.25rem" }}>
+              退出查看 (Logout)
+            </button>
           </div>
         </div>
 

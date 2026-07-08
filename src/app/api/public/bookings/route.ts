@@ -5,14 +5,12 @@ import { prisma } from "@/lib/db";
 function maskContact(contact: string): string {
   const trimmed = contact.trim();
   if (trimmed.includes("@")) {
-    // Mask email (e.g., test@example.com -> te**@example.com)
     const [localPart, domain] = trimmed.split("@");
     if (localPart.length <= 2) {
       return `**@${domain}`;
     }
     return `${localPart.substring(0, 2)}**@${domain}`;
   } else {
-    // Mask phone number (e.g., 13812345678 -> 138****5678)
     if (trimmed.length >= 7) {
       const start = trimmed.substring(0, 3);
       const end = trimmed.substring(trimmed.length - 4);
@@ -22,9 +20,25 @@ function maskContact(contact: string): string {
   }
 }
 
-// GET /api/public/bookings - Get list of bookings for public display (contact masked)
-export async function GET() {
+// GET /api/public/bookings - Get list of bookings for public display (contact masked, password protected)
+export async function GET(request: Request) {
   try {
+    const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
+    const dashboardPassword = process.env.DASHBOARD_PASSWORD || "viewer123";
+    
+    const authHeader = request.headers.get("authorization");
+    
+    // Allow either the specific dashboard password OR the admin password to view the dashboard
+    if (
+      !authHeader || 
+      (authHeader !== `Bearer ${dashboardPassword}` && authHeader !== `Bearer ${adminPassword}`)
+    ) {
+      return NextResponse.json(
+        { error: "Unauthorized access" },
+        { status: 401 }
+      );
+    }
+
     const bookings = await prisma.booking.findMany({
       orderBy: {
         createdAt: "desc",
