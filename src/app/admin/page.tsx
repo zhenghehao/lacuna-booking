@@ -1,0 +1,292 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { BOOKING_SLOTS } from "@/lib/constants";
+
+interface BookingData {
+  id: string;
+  name: string;
+  company: string;
+  position: string;
+  contact: string;
+  slot: string;
+  status: string;
+  createdAt: string;
+}
+
+export default function AdminDashboard() {
+  const [password, setPassword] = useState("");
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [bookings, setBookings] = useState<BookingData[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Check if password exists in localStorage on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedPassword = localStorage.getItem("lacuna_admin_pwd");
+      if (savedPassword) {
+        setPassword(savedPassword);
+        fetchBookings(savedPassword);
+      }
+    }
+  }, []);
+
+  const fetchBookings = async (pwd: string) => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch("/api/admin/bookings", {
+        headers: {
+          Authorization: `Bearer ${pwd}`,
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error("密码错误。 Incorrect Password.");
+        }
+        throw new Error("Failed to load booking details.");
+      }
+
+      const data = await response.json();
+      setBookings(data);
+      setIsAuthorized(true);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("lacuna_admin_pwd", pwd);
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to fetch bookings.");
+      setIsAuthorized(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password.trim()) {
+      setError("Password is required.");
+      return;
+    }
+    fetchBookings(password);
+  };
+
+  const handleLogout = () => {
+    setIsAuthorized(false);
+    setPassword("");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("lacuna_admin_pwd");
+    }
+  };
+
+  const handleExportCSV = () => {
+    if (bookings.length === 0) return;
+
+    // Helper to format slot name
+    const getSlotLabel = (slotId: string) => {
+      const found = BOOKING_SLOTS.find((s) => s.id === slotId);
+      return found ? found.label.replace(/,/g, " ") : slotId;
+    };
+
+    // Header row
+    const headers = ["Booking ID", "Name", "Company", "Position", "Contact Info", "Selected Slot", "Status", "Created Date"];
+    
+    // Rows mapping
+    const rows = bookings.map((b) => [
+      b.id,
+      `"${b.name.replace(/"/g, '""')}"`,
+      `"${b.company.replace(/"/g, '""')}"`,
+      `"${b.position.replace(/"/g, '""')}"`,
+      `"${b.contact.replace(/"/g, '""')}"`,
+      `"${getSlotLabel(b.slot)}"`,
+      b.status,
+      new Date(b.createdAt).toLocaleString(),
+    ]);
+
+    // Combine headers and rows
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
+      + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `lacuna_bookings_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  if (!isAuthorized) {
+    return (
+      <div className="container" style={{ maxWidth: "450px" }}>
+        <div className="header">Admin Dashboard</div>
+        <div className="content">
+          <form onSubmit={handleLoginSubmit}>
+            {error && <div className="alert alert-error">{error}</div>}
+            <div className="form-group">
+              <label htmlFor="admin-pwd">输入管理员密码 (Admin Password):</label>
+              <input
+                type="password"
+                id="admin-pwd"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="默认密码: admin123"
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  fontSize: "1rem",
+                  border: "1px solid var(--border-color)",
+                  borderRadius: "6px",
+                }}
+              />
+            </div>
+            <div className="btn-container" style={{ marginTop: "1rem" }}>
+              <button type="submit" className="btn" disabled={loading} style={{ width: "100%" }}>
+                {loading ? "Verifying..." : "进入后台 (Enter)"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate statistics
+  const totalBookings = bookings.length;
+  const confirmedBookings = bookings.filter((b) => b.status === "CONFIRMED").length;
+  const cancelledBookings = bookings.filter((b) => b.status === "CANCELLED").length;
+
+  const slotStats = BOOKING_SLOTS.map((slot) => {
+    const count = bookings.filter((b) => b.slot === slot.id && b.status === "CONFIRMED").length;
+    return {
+      ...slot,
+      count,
+    };
+  });
+
+  return (
+    <div className="container" style={{ maxWidth: "1000px" }}>
+      <div className="header">
+        Lacuna Booking Admin Backend
+      </div>
+      
+      <div className="content">
+        <div className="admin-header">
+          <div>
+            <h2 style={{ fontSize: "1.5rem", fontWeight: "700" }}>预约数据概览 (Overview)</h2>
+            <p className="description">管理和监控当前的会议预约名额</p>
+          </div>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <button onClick={handleExportCSV} className="btn" style={{ fontSize: "0.9rem" }}>
+              导出 CSV (Export Data)
+            </button>
+            <button onClick={handleLogout} className="btn btn-secondary" style={{ fontSize: "0.9rem", padding: "0.5rem 1.25rem" }}>
+              退出登录 (Logout)
+            </button>
+          </div>
+        </div>
+
+        {/* Statistical cards */}
+        <div className="admin-stats">
+          <div className="stat-card">
+            <div className="description">总提交数 (Total Submissions)</div>
+            <div className="stat-number">{totalBookings}</div>
+          </div>
+          <div className="stat-card" style={{ borderColor: "rgba(16, 185, 129, 0.3)" }}>
+            <div className="description">有效预约 (Confirmed Bookings)</div>
+            <div className="stat-number" style={{ color: "var(--success-color)" }}>{confirmedBookings}</div>
+          </div>
+          <div className="stat-card" style={{ borderColor: "rgba(239, 68, 68, 0.3)" }}>
+            <div className="description">已取消预约 (Cancelled Bookings)</div>
+            <div className="stat-number" style={{ color: "var(--error-color)" }}>{cancelledBookings}</div>
+          </div>
+        </div>
+
+        {/* Slot fill level */}
+        <div className="card">
+          <div className="card-title">场次预约名额占用率 (Slot Occupancy Rate)</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            {slotStats.map((slot) => {
+              const fillPercentage = Math.min((slot.count / slot.capacity) * 100, 100);
+              return (
+                <div key={slot.id}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem", fontWeight: "500", marginBottom: "0.25rem" }}>
+                    <span style={{ maxWidth: "70%" }}>{slot.label}</span>
+                    <span>{slot.count} / {slot.capacity} 人</span>
+                  </div>
+                  <div style={{ width: "100%", height: "8px", backgroundColor: "rgba(0,0,0,0.06)", borderRadius: "9999px", overflow: "hidden" }}>
+                    <div style={{
+                      width: `${fillPercentage}%`,
+                      height: "100%",
+                      backgroundColor: fillPercentage >= 100 ? "var(--error-color)" : fillPercentage >= 80 ? "#f59e0b" : "var(--primary-color)",
+                      borderRadius: "9999px"
+                    }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Bookings table */}
+        <div className="card" style={{ marginTop: "2rem" }}>
+          <div className="card-title">预约名单 (Bookings List)</div>
+          
+          {bookings.length === 0 ? (
+            <p style={{ textAlign: "center", color: "var(--text-muted)", padding: "2rem" }}>暂无预约记录 (No bookings yet.)</p>
+          ) : (
+            <div className="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>姓名 (Name)</th>
+                    <th>公司/职位 (Company/Title)</th>
+                    <th>联系方式 (Contact)</th>
+                    <th>场次 (Slot)</th>
+                    <th>状态 (Status)</th>
+                    <th>操作 (Action)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookings.map((booking) => {
+                    const slotInfo = BOOKING_SLOTS.find((s) => s.id === booking.slot);
+                    return (
+                      <tr key={booking.id}>
+                        <td style={{ fontWeight: "600" }}>{booking.name}</td>
+                        <td>
+                          <div>{booking.company}</div>
+                          <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>{booking.position}</div>
+                        </td>
+                        <td>{booking.contact}</td>
+                        <td style={{ maxWidth: "250px", fontSize: "0.8rem" }}>
+                          {slotInfo ? slotInfo.label.split(";")[0] : booking.slot}
+                        </td>
+                        <td>
+                          <span className={`status-badge status-${booking.status.toLowerCase()}`}>
+                            {booking.status === "CONFIRMED" ? "有效" : "已取消"}
+                          </span>
+                        </td>
+                        <td>
+                          <a
+                            href={`/manage?id=${booking.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn btn-secondary"
+                            style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
+                          >
+                            管理 (Manage)
+                          </a>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,20 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Booking {
+  id          String   @id @default(uuid())
+  name        String
+  company     String
+  position    String
+  contact     String
+  slot        String   // "july_31" or "aug_1"
+  status      String   @default("CONFIRMED") // "CONFIRMED" or "CANCELLED"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
