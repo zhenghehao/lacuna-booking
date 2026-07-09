@@ -129,13 +129,13 @@ export default function AdminDashboard() {
           <form onSubmit={handleLoginSubmit}>
             {error && <div className="alert alert-error">{error}</div>}
             <div className="form-group">
-              <label htmlFor="admin-pwd">输入管理员密码 (Admin Password):</label>
+              <label htmlFor="admin-pwd">Enter Admin Password:</label>
               <input
                 type="password"
                 id="admin-pwd"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="默认密码: admin123"
+                placeholder="Default: admin123"
                 style={{
                   width: "100%",
                   padding: "0.75rem",
@@ -147,7 +147,7 @@ export default function AdminDashboard() {
             </div>
             <div className="btn-container" style={{ marginTop: "1rem" }}>
               <button type="submit" className="btn" disabled={loading} style={{ width: "100%" }}>
-                {loading ? "Verifying..." : "进入后台 (Enter)"}
+                {loading ? "Verifying..." : "Enter Panel"}
               </button>
             </div>
           </form>
@@ -170,15 +170,15 @@ export default function AdminDashboard() {
       <div className="content">
         <div className="admin-header">
           <div>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: "700" }}>预约数据概览 (Overview)</h2>
-            <p className="description">管理和监控当前的会议预约名额</p>
+            <h2 style={{ fontSize: "1.5rem", fontWeight: "700" }}>Booking Overview</h2>
+            <p className="description">Monitor and manage schedule occupancy and details.</p>
           </div>
           <div style={{ display: "flex", gap: "0.5rem" }}>
             <button onClick={handleExportCSV} className="btn" style={{ fontSize: "0.9rem" }}>
-              导出 CSV (Export Data)
+              Export CSV
             </button>
             <button onClick={handleLogout} className="btn btn-secondary" style={{ fontSize: "0.9rem", padding: "0.5rem 1.25rem" }}>
-              退出登录 (Logout)
+              Logout
             </button>
           </div>
         </div>
@@ -186,15 +186,15 @@ export default function AdminDashboard() {
         {/* Statistical cards */}
         <div className="admin-stats">
           <div className="stat-card">
-            <div className="description">总提交数 (Total Submissions)</div>
+            <div className="description">Total Submissions</div>
             <div className="stat-number">{totalBookings}</div>
           </div>
           <div className="stat-card" style={{ borderColor: "rgba(16, 185, 129, 0.3)" }}>
-            <div className="description">有效预约 (Confirmed Bookings)</div>
+            <div className="description">Confirmed Bookings</div>
             <div className="stat-number" style={{ color: "var(--success-color)" }}>{confirmedBookings}</div>
           </div>
           <div className="stat-card" style={{ borderColor: "rgba(239, 68, 68, 0.3)" }}>
-            <div className="description">已取消预约 (Cancelled Bookings)</div>
+            <div className="description">Cancelled Bookings</div>
             <div className="stat-number" style={{ color: "var(--error-color)" }}>{cancelledBookings}</div>
           </div>
         </div>
@@ -203,7 +203,7 @@ export default function AdminDashboard() {
         {DATE_PLACES.map((dp) => (
           <div className="card" key={dp.id} style={{ marginBottom: "1.5rem" }}>
             <div className="card-title" style={{ fontSize: "1.05rem" }}>
-              {dp.label} - 时间段占用情况
+              Occupancy: {dp.label.split(";")[0]}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "0.75rem" }}>
               {TIME_SLOTS_BY_DATE[dp.id].map((time) => {
@@ -237,7 +237,7 @@ export default function AdminDashboard() {
                         color: isOccupied ? "var(--error-color)" : "var(--success-color)",
                       }}
                     >
-                      {isOccupied ? "已占用" : "空闲"}
+                      {isOccupied ? "Booked" : "Available"}
                     </span>
                   </div>
                 );
@@ -248,21 +248,21 @@ export default function AdminDashboard() {
 
         {/* Bookings table */}
         <div className="card" style={{ marginTop: "2rem" }}>
-          <div className="card-title">预约名单 (Bookings List)</div>
+          <div className="card-title">Bookings List</div>
           
           {bookings.length === 0 ? (
-            <p style={{ textAlign: "center", color: "var(--text-muted)", padding: "2rem" }}>暂无预约记录 (No bookings yet.)</p>
+            <p style={{ textAlign: "center", color: "var(--text-muted)", padding: "2rem" }}>No bookings yet.</p>
           ) : (
             <div className="table-responsive">
               <table>
                 <thead>
                   <tr>
-                    <th>姓名 (Name)</th>
-                    <th>公司/职位 (Company/Title)</th>
-                    <th>联系方式 (Contact)</th>
-                    <th>场次和时间 (Slot & Time)</th>
-                    <th>状态 (Status)</th>
-                    <th>操作 (Action)</th>
+                    <th>Name</th>
+                    <th>Company / Title</th>
+                    <th>Contact</th>
+                    <th>Slot & Time</th>
+                    <th>Status</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -287,7 +287,7 @@ export default function AdminDashboard() {
                         </td>
                         <td>
                           <span className={`status-badge status-${booking.status.toLowerCase()}`}>
-                            {booking.status === "CONFIRMED" ? "有效" : "已取消"}
+                            {booking.status === "CONFIRMED" ? "Confirmed" : "Cancelled"}
                           </span>
                         </td>
                         <td>
@@ -298,7 +298,7 @@ export default function AdminDashboard() {
                             className="btn btn-secondary"
                             style={{ padding: "0.25rem 0.5rem", fontSize: "0.75rem" }}
                           >
-                            管理 (Manage)
+                            Manage
                           </a>
                         </td>
                       </tr>

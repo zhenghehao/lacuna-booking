@@ -102,7 +102,7 @@ export default function PublicDashboard() {
                 id="dashboard-pwd"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="默认查看密码: viewer123"
+                placeholder="Default: viewer123"
                 style={{
                   width: "100%",
                   padding: "0.75rem",
@@ -114,7 +114,7 @@ export default function PublicDashboard() {
             </div>
             <div className="btn-container" style={{ marginTop: "1rem" }}>
               <button type="submit" className="btn" disabled={loading} style={{ width: "100%" }}>
-                {loading ? "Verifying..." : "进入看板 (Enter)"}
+                {loading ? "Verifying..." : "Enter Dashboard"}
               </button>
             </div>
           </form>
@@ -137,12 +137,12 @@ export default function PublicDashboard() {
       <div className="content">
         <div className="admin-header">
           <div>
-            <h2 style={{ fontSize: "1.5rem", fontWeight: "700" }}>预约数据看板 (Public Monitor)</h2>
-            <p className="description">实时监控当前的会议预约和场次占用情况 (每30秒自动更新)</p>
+            <h2 style={{ fontSize: "1.5rem", fontWeight: "700" }}>Live Booking Dashboard</h2>
+            <p className="description">Real-time schedule occupancy and confirmed participant monitor. (Auto-refreshes every 30s)</p>
           </div>
           <div>
             <button onClick={handleLogout} className="btn btn-secondary" style={{ fontSize: "0.9rem", padding: "0.5rem 1.25rem" }}>
-              退出查看 (Logout)
+              Logout
             </button>
           </div>
         </div>
@@ -150,15 +150,15 @@ export default function PublicDashboard() {
         {/* Statistical cards */}
         <div className="admin-stats">
           <div className="stat-card">
-            <div className="description">总提交数 (Total Submissions)</div>
+            <div className="description">Total Submissions</div>
             <div className="stat-number">{totalBookings}</div>
           </div>
           <div className="stat-card" style={{ borderColor: "rgba(16, 185, 129, 0.3)" }}>
-            <div className="description">有效预约 (Confirmed Bookings)</div>
+            <div className="description">Confirmed Bookings</div>
             <div className="stat-number" style={{ color: "var(--success-color)" }}>{confirmedBookings}</div>
           </div>
           <div className="stat-card" style={{ borderColor: "rgba(239, 68, 68, 0.3)" }}>
-            <div className="description">已取消预约 (Cancelled Bookings)</div>
+            <div className="description">Cancelled Bookings</div>
             <div className="stat-number" style={{ color: "var(--error-color)" }}>{cancelledBookings}</div>
           </div>
         </div>
@@ -167,7 +167,7 @@ export default function PublicDashboard() {
         {DATE_PLACES.map((dp) => (
           <div className="card" key={dp.id} style={{ marginBottom: "1.5rem" }}>
             <div className="card-title" style={{ fontSize: "1.05rem" }}>
-              {dp.label} - 时间段占用情况
+              Occupancy: {dp.label.split(";")[0]}
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "0.75rem" }}>
               {TIME_SLOTS_BY_DATE[dp.id].map((time) => {
@@ -201,7 +201,7 @@ export default function PublicDashboard() {
                         color: isOccupied ? "var(--error-color)" : "var(--success-color)",
                       }}
                     >
-                      {isOccupied ? "已占用" : "空闲"}
+                      {isOccupied ? "Booked" : "Available"}
                     </span>
                   </div>
                 );
@@ -212,20 +212,20 @@ export default function PublicDashboard() {
 
         {/* Bookings table */}
         <div className="card" style={{ marginTop: "2rem" }}>
-          <div className="card-title">预约名单 (Bookings List)</div>
+          <div className="card-title">Bookings List</div>
           
           {bookings.length === 0 ? (
-            <p style={{ textAlign: "center", color: "var(--text-muted)", padding: "2rem" }}>暂无预约记录 (No bookings yet.)</p>
+            <p style={{ textAlign: "center", color: "var(--text-muted)", padding: "2rem" }}>No bookings yet.</p>
           ) : (
             <div className="table-responsive">
               <table>
                 <thead>
                   <tr>
-                    <th>姓名 (Name)</th>
-                    <th>公司/职位 (Company/Title)</th>
-                    <th>联系方式 (Contact - Masked)</th>
-                    <th>场次和时间 (Slot & Time)</th>
-                    <th>状态 (Status)</th>
+                    <th>Name</th>
+                    <th>Company / Title</th>
+                    <th>Contact (Masked)</th>
+                    <th>Slot & Time</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -250,7 +250,7 @@ export default function PublicDashboard() {
                         </td>
                         <td>
                           <span className={`status-badge status-${booking.status.toLowerCase()}`}>
-                            {booking.status === "CONFIRMED" ? "有效" : "已取消"}
+                            {booking.status === "CONFIRMED" ? "Confirmed" : "Cancelled"}
                           </span>
                         </td>
                       </tr>

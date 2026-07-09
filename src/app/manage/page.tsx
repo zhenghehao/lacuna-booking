@@ -117,7 +117,7 @@ function ManageContent() {
   };
 
   const handleCancelBooking = async () => {
-    if (!window.confirm("确定要取消此预约吗？ Are you sure you want to cancel this booking?")) {
+    if (!window.confirm("Are you sure you want to cancel this booking?")) {
       return;
     }
 
@@ -136,7 +136,7 @@ function ManageContent() {
         throw new Error(data.error || "Failed to cancel booking.");
       }
 
-      setMessage("预约已成功取消。 Booking successfully cancelled.");
+      setMessage("Booking successfully cancelled.");
       await fetchBooking();
     } catch (err: any) {
       setError(err.message || "Failed to cancel.");
@@ -181,7 +181,7 @@ function ManageContent() {
         throw new Error(data.error || "Failed to update booking details.");
       }
 
-      setMessage("预约信息更新成功！ Booking details updated successfully.");
+      setMessage("Booking details updated successfully.");
       setIsEditing(false);
       await fetchBooking();
     } catch (err: any) {
@@ -221,37 +221,37 @@ function ManageContent() {
         // VIEW MODE
         <div>
           <div className="card">
-            <div className="card-title">当前预约状态 (Current Booking Details)</div>
+            <div className="card-title">Current Booking Details</div>
             <div className="detail-row">
-              <div className="detail-label">预约状态 (Status):</div>
+              <div className="detail-label">Booking Status:</div>
               <div className="detail-value">
                 <span className={`status-badge status-${booking.status.toLowerCase()}`}>
-                  {booking.status === "CONFIRMED" ? "已确认 (Confirmed)" : "已取消 (Cancelled)"}
+                  {booking.status === "CONFIRMED" ? "Confirmed" : "Cancelled"}
                 </span>
               </div>
             </div>
             <div className="detail-row">
-              <div className="detail-label">预约编号 (ID):</div>
+              <div className="detail-label">Booking ID:</div>
               <div className="detail-value" style={{ fontFamily: "monospace" }}>{booking.id}</div>
             </div>
             <div className="detail-row">
-              <div className="detail-label">姓名 (Name):</div>
+              <div className="detail-label">Name:</div>
               <div className="detail-value">{booking.name}</div>
             </div>
             <div className="detail-row">
-              <div className="detail-label">公司 (Company):</div>
+              <div className="detail-label">Company:</div>
               <div className="detail-value">{booking.company}</div>
             </div>
             <div className="detail-row">
-              <div className="detail-label">职位 (Position):</div>
+              <div className="detail-label">Position:</div>
               <div className="detail-value">{booking.position}</div>
             </div>
             <div className="detail-row">
-              <div className="detail-label">联系方式 (Contact):</div>
+              <div className="detail-label">Contact Info:</div>
               <div className="detail-value">{booking.contact}</div>
             </div>
             <div className="detail-row">
-              <div className="detail-label">时间地点 (Slot):</div>
+              <div className="detail-label">Time & Place:</div>
               <div className="detail-value" style={{ fontWeight: "500" }}>
                 {datePlaceObj ? datePlaceObj.label.split(";")[0] : dbDatePlace} @ {dbTimeSlot}
               </div>
@@ -266,14 +266,14 @@ function ManageContent() {
                   className="btn"
                   disabled={actionLoading}
                 >
-                  修改/重新填写 (Modify / Re-Fill)
+                  Modify / Re-Fill
                 </button>
                 <button
                   onClick={handleCancelBooking}
                   className="btn btn-danger"
                   disabled={actionLoading}
                 >
-                  取消预约 (Cancel Booking)
+                  Cancel Booking
                 </button>
               </>
             ) : (
@@ -282,11 +282,11 @@ function ManageContent() {
                 className="btn"
                 disabled={actionLoading}
               >
-                重新激活并填写 (Re-activate & Book)
+                Re-activate & Book
               </button>
             )}
             <Link href="/" className="btn btn-secondary">
-              返回首页 (Back Home)
+              Go Back Home
             </Link>
           </div>
         </div>
@@ -294,7 +294,7 @@ function ManageContent() {
         // EDIT / RE-FILL FORM MODE
         <form onSubmit={handleUpdateBooking}>
           <h2 style={{ fontSize: "1.25rem", fontWeight: "700", marginBottom: "1.5rem", borderBottom: "1px solid var(--border-color)", paddingBottom: "0.5rem" }}>
-            修改预约信息 (Edit Booking Info)
+            Edit Booking Information
           </h2>
           
           <div className="form-group">
@@ -441,7 +441,7 @@ function ManageContent() {
                         <span>{time}</span>
                         {isOccupied && (
                           <span style={{ color: "var(--error-color)", fontSize: "0.85rem", fontWeight: "bold" }}>
-                            配额已满
+                            Fully Booked / FULL
                           </span>
                         )}
                       </label>
@@ -454,7 +454,7 @@ function ManageContent() {
 
           <div className="btn-container">
             <button type="submit" className="btn" disabled={actionLoading}>
-              {actionLoading ? "Saving..." : "保存修改 (Save Changes)"}
+              {actionLoading ? "Saving..." : "Save Changes"}
             </button>
             <button
               type="button"
@@ -462,7 +462,7 @@ function ManageContent() {
               className="btn btn-secondary"
               disabled={actionLoading}
             >
-              取消 (Cancel)
+              Cancel
             </button>
           </div>
         </form>

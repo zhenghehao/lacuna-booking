@@ -264,7 +264,7 @@ export default function BookingForm() {
                       <span>{time}</span>
                       {isOccupied && (
                         <span style={{ color: "var(--error-color)", fontSize: "0.85rem", fontWeight: "bold" }}>
-                          配额已满
+                          Fully Booked / FULL
                         </span>
                       )}
                     </label>
@@ -277,18 +277,18 @@ export default function BookingForm() {
 
         <div className="btn-container">
           <button type="submit" className="btn" disabled={loading || fetchingOccupied}>
-            {loading ? "Submitting..." : "提交"}
+            {loading ? "Submitting..." : "Submit"}
           </button>
         </div>
       </form>
 
       <div className="footer">
-        <p>此表单已经实名认证的 个人 制作、发布并收集您填写的信息</p>
-        <p>提交表单表示您已知悉收集信息的目的，并同意其使用您提交的信息</p>
+        <p>This form is securely managed. All submitted details will only be used for project alignment and reviews.</p>
+        <p>By submitting this form, you agree to secure data processing and storage of your appointment details.</p>
         <div className="footer-links">
-          <a href="#">查询发布者信息</a>
-          <a href="#">疑问与咨询</a>
-          <a href="#">投诉与举报</a>
+          <a href="#">Security Info</a>
+          <a href="#">Help & Support</a>
+          <a href="#">Privacy Policy</a>
         </div>
       </div>
     </div>
